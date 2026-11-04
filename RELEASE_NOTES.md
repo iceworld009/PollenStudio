@@ -1,3 +1,5 @@
+Windows setup fix: preserve Windows path separators, spaces, and shell quoting when passing commands to WSL. Normalize script line endings before running in Linux.
+
 Pollen Studio is a local annotation and training workspace from Harambe Cartel, Team 20912.
 
 Choose the package for your operating system:

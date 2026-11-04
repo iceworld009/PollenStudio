@@ -9,6 +9,7 @@ function Run-WSL([string[]]$Arguments) {
 # Windows PowerShell 5.1 can strip embedded quotes in native arguments.
 # Transport shell scripts as base64 so neither Windows nor Bash reinterprets paths.
 function Run-LinuxScript([string]$Script) {
+    $Script = $Script.Replace("`r`n", "`n")
     $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Script))
     Run-WSL -Arguments @('-d', $distro, '--exec', '/bin/bash', '-c', "echo $encoded|base64 -d|bash")
 }
