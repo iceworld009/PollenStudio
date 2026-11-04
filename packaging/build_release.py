@@ -3,11 +3,15 @@ from pathlib import Path
 import subprocess
 import zipfile
 import hashlib
+from audit_release import validate_source
 
 root = Path(__file__).resolve().parents[1]
 files = subprocess.check_output(['git', 'ls-files', '-z'], cwd=root).decode().split('\0')
 destination = root / 'dist'
 destination.mkdir(exist_ok=True)
+for name in filter(None, files):
+    validate_source(name, (root/name).read_bytes())
+print('Source audit passed: no runtime data, media, binaries, or recognized credentials.')
 checksums = []
 for platform in ('Linux', 'Windows'):
     archive = destination / f'PollenStudio-{platform}.zip'
