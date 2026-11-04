@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import time
+import threading
 import uuid
 import zipfile
 from email import policy
@@ -24,6 +25,7 @@ from studio import training, training_runtime, photo_audit, dataset_upload
 
 TOKEN = secrets.token_urlsafe(32)
 PROCESSES = {}
+JOB_LOCK = threading.RLock()
 TEST_PREVIEW_ARTIFACTS = {'test_gallery.html', 'test_preview.jpg', 'test_examples.json'} | {f'test_example_{n}.jpg' for n in range(1, 7)}
 
 
@@ -33,6 +35,11 @@ def live_experiment():
 
 
 def jobs():
+    with JOB_LOCK:
+        return _jobs()
+
+
+def _jobs():
     result = []
     for file in sorted((DATA / 'jobs').glob('*/job.json'), reverse=True):
         job = json.loads(file.read_text())
@@ -63,6 +70,11 @@ def busy():
 
 
 def launch(config, directory=None):
+    with JOB_LOCK:
+        return _launch(config,directory)
+
+
+def _launch(config, directory=None):
     if busy():
         raise ValueError('A job is already running. Wait or stop it first.')
     directory = directory or DATA / 'jobs' / uuid.uuid4().hex
@@ -78,6 +90,11 @@ def launch(config, directory=None):
 
 
 def stop_job(ident):
+    with JOB_LOCK:
+        return _stop_job(ident)
+
+
+def _stop_job(ident):
     p = PROCESSES.get(ident)
     if p and p.poll() is None:
         os.killpg(p.pid, signal.SIGTERM)

@@ -1,3 +1,7 @@
+Validation: 50 automated tests in a temporary Bubblewrap container (one optional private-model test skipped); isolated HTTP upload/import/annotation checks; desktop/mobile browser checks; and a two-step synthetic three-class GPU train/export/quantize/inference/Coral compile test on GTX 1650. Fixed TensorFlow decoder aliases and narrow-range calibration compatibility discovered by that smoke test. No benchmark-quality model was produced or distributed.
+
+Automatic compute selection: live TensorFlow GPU verification, CPU fallback, and manual overrides. Includes isolated clean-install tests, an optional synthetic training/export smoke test, serialized job launches, and a fix for TensorFlow record-decoder compatibility. Windows/WSL2 still needs hardware validation.
+
 Dataset upload: import TensorFlow TFRecord ZIPs up to 10 GB directly from Windows or another browser. Includes chunked transfer, progress, cancellation, retry handling, disk-space checks, and preserved train/validation splits. Removes remaining PLN_600 wording from the interface.
 
 Setup reliability fix: resolve requirements.txt relative to the installer, validate the complete source folder before copying to WSL, and report missing files explicitly.

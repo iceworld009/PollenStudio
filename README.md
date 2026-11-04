@@ -27,6 +27,8 @@ Open **http://localhost:8765**. Keep the terminal open while using Studio. The m
 
 Install an up-to-date NVIDIA Windows driver before GPU training. The application and datasets run inside WSL2 at `~/PollenStudio`; keep that folder when updating. Setup copies source files from the extracted package without replacing datasets or models. Do not install a separate Linux NVIDIA display driver inside WSL.
 
+Compute defaults to **Automatic**: Studio checks the current driver and runs a small TensorFlow GPU operation. A usable GPU is selected automatically; otherwise training uses CPU and explains when detected hardware is unavailable to TensorFlow. You can explicitly select CPU or GPU. Device checks refresh periodically and Automatic mode checks again when a training job starts.
+
 An RTX 3050 is an intended training target, but training batch size depends on available VRAM. The Windows package uses the same Linux TensorFlow trainer through WSL2, rather than native Windows CUDA. A real Windows/RTX 3050 installation has not yet been validated by the maintainers.
 
 ### Development setup
@@ -125,6 +127,20 @@ Back up `studio_data/` and any imported source photos before moving an installat
 ```bash
 .venv/bin/python -m unittest discover -s tests -q
 ```
+
+## Isolated validation
+
+On Linux, install Bubblewrap and run `bash packaging/test-container.sh` after setup. This runs the automated suite and HTTP integration checks in temporary Linux namespaces, with a read-only filesystem, hidden home directory, disposable data storage, and no host GPU devices. Network access is shared for local HTTP tests. This is a Bubblewrap container, not a Docker image.
+
+The smoke test exercises a fresh workspace, CPU fallback, request authentication, upload limits, a multi-chunk dataset import, preserved classes and splits, annotation saves, cancellation, and training setup guards. It uses synthetic images and deletes temporary data. It does not install the full training runtime or benchmark model quality. NVIDIA GPU execution must also be tested on a host with a usable driver; Windows/WSL2 still needs platform testing.
+
+For an optional end-to-end training smoke test after runtime setup, run:
+
+```bash
+PYTHONPATH=. .venv/bin/python packaging/training_smoke.py
+```
+
+This performs two synthetic training steps, exports a three-class quantized TFLite model, checks CPU inference and labels, and runs Coral compilation. Outputs are temporary and are deleted afterward. It tests functionality, not model accuracy.
 
 ## License
 
