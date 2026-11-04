@@ -33,13 +33,16 @@ def parameters(body):
     steps, batch = int(body.get('steps',4000)), int(body.get('batch',2))
     rate = float(body.get('learning_rate',.0003))
     name = str(body.get('name','Pollen SSD')).strip()
-    device = body.get('device','cpu')
+    requested_device = body.get('device','auto')
+    device = requested_device
     if not 1 <= steps <= 100000 or not 1 <= batch <= 8 or not math.isfinite(rate) or not 0.000001 <= rate <= .01:
         raise ValueError('Choose 1–100000 steps, batch 1–8, and learning rate 0.000001–0.01.')
     if not name or len(name)>80 or any(ord(c)<32 for c in name):
         raise ValueError('Choose a model name of 1–80 characters.')
-    if device not in ('cpu','gpu'):
-        raise ValueError('Choose CPU or an available TensorFlow GPU.')
+    if device not in ('auto','cpu','gpu'):
+        raise ValueError('Choose Automatic, CPU, or an available TensorFlow GPU.')
+    if device == 'auto':
+        device = 'gpu' if runtime.status().get('gpus') else 'cpu'
     source = body.get('source','pretrained')
     previous = None
     geometry = {}
@@ -53,7 +56,7 @@ def parameters(body):
             geometry = {'image_size':int(info.get('image_size', recipe.get('image_size', 300))),
                         'small_anchors':bool(info.get('small_anchors', recipe.get('small_anchors', False))),
                         'max_detections':int(info.get('max_detections', 10))}
-    return {'steps':steps,'batch':batch,'learning_rate':rate,'name':name,'device':device,'previous_checkpoint':previous,**geometry}
+    return {'steps':steps,'batch':batch,'learning_rate':rate,'name':name,'device':device,'requested_device':requested_device,'previous_checkpoint':previous,**geometry}
 
 
 def stage(folder, message):
@@ -84,6 +87,10 @@ def training_snapshot(folder):
 def run(config):
     if not runtime.status()['ready']:
         raise ValueError('Prepare the local TensorFlow trainer first.')
+    if config.get('requested_device')=='auto':
+        current=runtime.detect_devices(refresh=True)
+        config['device']='gpu' if current['gpus'] else 'cpu'
+        print('Automatic device selection:',config['device'],current.get('gpu_names') or current.get('gpu_error') or '',flush=True)
     folder = Path(config['directory'])
     output = folder/'model'; output.mkdir(parents=True,exist_ok=True)
     # A separate observer supplies live charts and CPU validation without blocking training.

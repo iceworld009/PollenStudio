@@ -6,6 +6,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import threading
+import time
 import tarfile
 import urllib.request
 
@@ -52,13 +54,58 @@ def environment(device='cpu'):
     return env
 
 
+_DEVICE_CACHE = {}
+_DEVICE_LOCK = threading.Lock()
+
+
+def detect_devices(refresh=False):
+    """Probe the current driver and TensorFlow, rather than trusting setup history."""
+    key=(str(PYTHON),PYTHON.is_file())
+    with _DEVICE_LOCK:
+        cached=_DEVICE_CACHE.get(key)
+        if not refresh and cached and time.monotonic()-cached[0]<30:
+            return dict(cached[1])
+        result={'gpus':[], 'gpu_names':[], 'detected_gpu_names':[], 'gpu_error':None}
+        try:
+            hardware=subprocess.run(['nvidia-smi','--query-gpu=name','--format=csv,noheader'],capture_output=True,text=True,timeout=3)
+            if hardware.returncode==0:result['detected_gpu_names']=[n.strip() for n in hardware.stdout.splitlines() if n.strip()]
+        except (OSError,subprocess.TimeoutExpired):pass
+        if PYTHON.is_file():
+            code = """import json,tensorflow as tf
+physical=tf.config.list_physical_devices('GPU')
+for gpu in physical: tf.config.experimental.set_memory_growth(gpu,True)
+tf.config.set_soft_device_placement(False)
+usable=[]; names=[]
+for i,gpu in enumerate(physical[:1]):
+ try:
+  with tf.device('/GPU:'+str(i)):
+   value=tf.matmul(tf.ones((2,2)),tf.ones((2,2))).numpy()
+  usable.append(gpu.name);names.append(tf.config.experimental.get_device_details(gpu).get('device_name','NVIDIA GPU'))
+ except Exception: pass
+print(json.dumps({'gpus':usable,'gpu_names':names}))
+"""
+            try:
+                probe=subprocess.run([str(PYTHON),'-c',code],env=environment('auto'),capture_output=True,text=True,timeout=25)
+                if probe.returncode==0:
+                    detected=json.loads(probe.stdout.strip().splitlines()[-1]);result.update(detected)
+                else:result['gpu_error']='TensorFlow GPU check failed. CPU will be used in Automatic mode.'
+            except (OSError,ValueError,IndexError,subprocess.TimeoutExpired):
+                result['gpu_error']='TensorFlow GPU check could not complete. CPU will be used in Automatic mode.'
+        if not result['gpus'] and result['detected_gpu_names'] and not result['gpu_error']:
+            result['gpu_error']='NVIDIA hardware detected; TensorFlow GPU access is not available yet.'
+        _DEVICE_CACHE[key]=(time.monotonic(),dict(result))
+        return result
+
+
 def status():
     marker = RUNTIME / 'ready.json'
     ready = marker.is_file() and PYTHON.is_file() and (PRETRAINED/'pipeline.config').is_file() and (COMPILER/'edgetpu_compiler').is_file()
     info = json.loads(marker.read_text()) if ready else {}
     expected = hashlib.sha256((ROOT/'requirements-training.txt').read_bytes()).hexdigest()
     ready = ready and info.get('requirements_sha256') == expected
-    return {'ready':bool(ready), 'path':str(RUNTIME), 'gpus':info.get('gpus',[]), 'gpu_names':info.get('gpu_names',[]), 'tensorflow':info.get('tensorflow')}
+    devices=detect_devices()
+    return {'ready':bool(ready), 'path':str(RUNTIME), 'tensorflow':info.get('tensorflow'), **devices,
+            'recommended_device':'gpu' if devices['gpus'] else 'cpu'}
 
 
 def download(url, destination):
