@@ -1,3 +1,5 @@
+Setup reliability fix: resolve requirements.txt relative to the installer, validate the complete source folder before copying to WSL, and report missing files explicitly.
+
 Windows setup fix: preserve Windows path separators, spaces, and shell quoting when passing commands to WSL. Normalize script line endings before running in Linux.
 
 Pollen Studio is a local annotation and training workspace from Harambe Cartel, Team 20912.

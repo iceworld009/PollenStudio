@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
+project_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+cd -- "$project_root"
+if [[ ! -f "$project_root/requirements.txt" ]]; then
+  printf "Missing %s/requirements.txt. Extract the complete release ZIP and run Setup-Windows.cmd or Setup-Linux.sh from that folder.\n" "$project_root" >&2
+  exit 1
+fi
 if [[ $(uname -s) != Linux || $(uname -m) != x86_64 ]]; then
   echo 'This release requires 64-bit x86 Linux. On Windows, run Setup-Windows.cmd.' >&2
   exit 1
@@ -23,6 +28,6 @@ fi
 if [[ ! -x .venv/bin/python ]]; then
   .tools/uv venv --python 3.10 --seed .venv
 fi
-.tools/uv pip install --python .venv/bin/python -r requirements.txt
+.tools/uv pip install --python .venv/bin/python -r "$project_root/requirements.txt"
 printf '\nPollen Studio is ready. Run ./Start-Linux.sh, then open http://localhost:8765\n'
 printf 'For GPU training, install a compatible NVIDIA driver, then use Prepare local trainer in Studio.\n'

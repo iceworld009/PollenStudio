@@ -36,6 +36,9 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Cannot access this folder from WSL.' }
     $linuxSource = ($linuxSource -replace "`0", '').Trim()
     if ($Setup) {
+        if (-not (Test-Path -LiteralPath (Join-Path $root 'requirements.txt'))) {
+            throw 'requirements.txt is missing. Extract the entire release ZIP, then run Setup-Windows.cmd from the extracted folder.'
+        }
         Run-LinuxScript -Script 'set -e; sudo apt-get update; sudo apt-get install -y curl ca-certificates'
         # Transfer source only; datasets and environments stay in Linux storage.
         $sourceEncoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($linuxSource))
@@ -44,8 +47,10 @@ set -euo pipefail
 source_path=$(echo __SOURCE_BASE64__ | base64 -d)
 mkdir -p "$HOME/PollenStudio"
 cd "$source_path"
+test -f requirements.txt || { echo "Missing requirements.txt in source folder: $source_path" >&2; exit 1; }
 tar --exclude=./.venv --exclude=./.tools --exclude=./.python --exclude=./studio_data --exclude=./models --exclude=./captures --exclude=./.git --exclude=./.env --exclude='*.zip' -cf - . | tar -xf - -C "$HOME/PollenStudio"
 cd "$HOME/PollenStudio"
+test -f requirements.txt || { echo "Source transfer failed: requirements.txt was not copied." >&2; exit 1; }
 bash Setup-Linux.sh
 '@
         Run-LinuxScript -Script $copyScript.Replace('__SOURCE_BASE64__', $sourceEncoded)
