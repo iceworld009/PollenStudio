@@ -1,0 +1,26 @@
+# Isolated Python 3.10 runtime for the TensorFlow Object Detection API.
+tensorflow[and-cuda]==2.15.1
+tf-models-official==2.15.0
+tf-keras==2.15.1
+keras==2.15.0
+numpy==1.26.4
+protobuf==4.21.12
+grpcio-tools==1.62.3
+tensorflow-probability==0.23.0
+tensorflow-model-optimization==0.8.0
+tensorflow-hub==0.16.1
+tensorflow-text==2.15.0
+tf-slim==1.1.0
+pycocotools>=2.0.7,<3
+lvis==0.5.3
+scipy==1.13.1
+matplotlib==3.8.4
+Pillow>=11,<13
+lxml>=5,<7
+contextlib2==21.6.0
+avro-python3==1.10.2
+google-crc32c>=1.7,<2
+tensorflow-datasets==4.9.4
+tensorflow-metadata==1.17.0
+setuptools==69.5.1
+tensorflow-io==0.36.0

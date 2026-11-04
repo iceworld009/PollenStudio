@@ -1,0 +1,5 @@
+numpy>=2.0,<3
+Pillow>=11,<13
+ai-edge-litert>=2.0,<3
+google-crc32c>=1.7,<2
+# TensorFlow training uses a separate environment; set it up from the Training tab.
