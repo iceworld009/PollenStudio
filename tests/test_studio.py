@@ -369,7 +369,8 @@ class StudioTests(unittest.TestCase):
         self.add('archived','include');self.add('new')
         core.archive_images(['archived'])
         with core.connect() as db:db.execute('UPDATE images SET status="pending" WHERE id="archived"')
-        with patch.object(server,'launch',return_value={'kind':'predict'}) as launched:
+        fixture=self.data/'detector.tflite';fixture.write_bytes(b'1234TFL3')
+        with patch.object(server,'DEFAULT_MODEL',fixture), patch.object(server,'launch',return_value={'kind':'predict'}) as launched:
             self.assertEqual(self.request('/api/predict',{'confidence':.35})[0],200)
             self.assertEqual([r['id'] for r in launched.call_args.args[0]['images']],['new'])
 
@@ -442,7 +443,7 @@ class StudioTests(unittest.TestCase):
         ]:
             with self.assertRaises(ValueError):
                 models.store_upload(filename,data,normalization,labels)
-        self.assertEqual(len(models.available_models()),1)
+        self.assertEqual(len(models.available_models()),int(models.DEFAULT_MODEL.is_file()))
         with self.assertRaises(ValueError): models.resolve_model('../../outside')
 
     def test_upload_endpoint_requires_multipart_and_token(self):
@@ -450,6 +451,7 @@ class StudioTests(unittest.TestCase):
         self.assertEqual(self.request('/api/upload-model',{},token='invalid')[0],403)
 
     @unittest.skipUnless(importlib.util.find_spec('ai_edge_litert') and importlib.util.find_spec('numpy'), 'TFLite runtime not installed')
+    @unittest.skipUnless(core.DEFAULT_MODEL.is_file(), "Optional local model fixture not installed")
     def test_real_model_upload_and_compatibility_checks(self):
         model=models.store_upload('../my-pollen.tflite',core.DEFAULT_MODEL.read_bytes(),labels=b'pollen\n')
         self.assertEqual(model['name'],'my-pollen.tflite')
