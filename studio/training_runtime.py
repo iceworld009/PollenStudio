@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tarfile
 import urllib.request
 
@@ -128,7 +129,7 @@ def finalize():
 
 
 def setup():
-    python = shutil.which('python3.10')
+    python = sys.executable if sys.version_info[:2] == (3, 10) else shutil.which('python3.10')
     if not python:
         raise ValueError('Python 3.10 is required for this isolated TensorFlow trainer. Install Python 3.10, then run setup again.')
     if not PYTHON.is_file():

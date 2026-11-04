@@ -4,9 +4,32 @@ A local web app for building object detection datasets and training TFLite model
 
 Pollen Studio supports three game elements: pollen, blue Nectar, and red Nectar. Upload camera photos, draw or correct boxes, review model predictions, and train from the images you have approved.
 
-## Run locally
+## Install and start
 
-Linux is the supported platform. Install Python 3.10 or newer, then run:
+Download the Linux or Windows source package from Releases and extract it into a permanent folder. Setup downloads Python 3.10 and the application dependencies; internet access is required. No private model or dataset is bundled.
+
+### Linux (x86-64)
+
+Install `curl` and CA certificates using your package manager, then run:
+
+```bash
+bash Setup-Linux.sh
+bash Start-Linux.sh
+```
+
+Open **http://localhost:8765**. Keep the terminal open while using Studio. The managed Python environment lives in the application folder; no system Python changes are needed.
+
+### Windows 10/11 (x86-64)
+
+1. Double-click **Setup-Windows.cmd**. Setup uses Ubuntu 22.04 under WSL2. Windows may request administrator permission, a restart, and an Ubuntu username/password during first-time installation. Run setup again after completing those steps.
+2. Double-click **Start-Windows.cmd**.
+3. Open **http://localhost:8765** in your Windows browser.
+
+Install an up-to-date NVIDIA Windows driver before GPU training. The application and datasets run inside WSL2 at `~/PollenStudio`; keep that folder when updating. Setup copies source files from the extracted package without replacing datasets or models. Do not install a separate Linux NVIDIA display driver inside WSL.
+
+An RTX 3050 is an intended training target, but training batch size depends on available VRAM. The Windows package uses the same Linux TensorFlow trainer through WSL2, rather than native Windows CUDA. A real Windows/RTX 3050 installation has not yet been validated by the maintainers.
+
+### Development setup
 
 ```bash
 python3 -m venv .venv
@@ -14,9 +37,7 @@ python3 -m venv .venv
 ./start_studio.sh --host 127.0.0.1 --port 8765
 ```
 
-Open **http://127.0.0.1:8765**. No model or private dataset is included. You can upload and manually annotate photos immediately; upload a compatible model to enable auto-annotation.
-
-For the desktop launcher, run `python3 launch_studio.py`. It starts Studio in the background and opens your browser.
+You can upload and manually annotate photos immediately. Inference needs a compatible uploaded model; training dependencies are installed separately from the Training tab.
 
 ## Work with your team
 

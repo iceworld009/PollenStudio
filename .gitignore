@@ -16,3 +16,7 @@ captures/
 *.tfrecord
 *.zip
 .DS_Store
+
+.tools/
+.python/
+dist/
