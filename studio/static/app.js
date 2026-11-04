@@ -150,3 +150,26 @@ $('archive-all-review').onclick=()=>action(archiveAllIncluded);$('archive-all-ga
 $('photo-upload-form').onsubmit=e=>{e.preventDefault();action(async()=>{const form=e.target,button=form.querySelector('button'),status=$('photo-upload-status');button.disabled=true;status.textContent='Uploading…';try{const response=await fetch('/api/upload-photos',{method:'POST',headers:{'X-Studio-Token':state.token},body:new FormData(form)});const result=await response.json();if(!response.ok)throw Error(result.error||'Upload failed');status.textContent='Uploaded '+result.count+' photos · '+result.skipped+' duplicates skipped';form.reset();await refresh();notify('Photos uploaded. Ready for review.');}catch(error){status.textContent=error.message;throw error;}finally{button.disabled=false;}});};
 
 $('element-class').onchange=()=>{if(selected>=0&&editable()){remember();boxes[selected].class_id=Number($('element-class').value);changed();}};
+
+let datasetUploadCancelled=false;
+$('dataset-upload-cancel').onclick=()=>{datasetUploadCancelled=true;$('dataset-upload-status').textContent='Cancelling after current chunk…';};
+$('dataset-upload-form').onsubmit=e=>{e.preventDefault();action(async()=>{
+ const form=e.target,file=form.elements.dataset.files[0],button=form.querySelector('button'),progress=$('dataset-upload-progress'),status=$('dataset-upload-status'),cancel=$('dataset-upload-cancel');
+ if(!file||file.size>10*1024**3)throw Error('Choose a ZIP no larger than 10 GB.');
+ button.disabled=true;cancel.hidden=false;progress.hidden=false;progress.value=0;datasetUploadCancelled=false;let upload=null,finished=false;
+ try{
+  upload=await api('dataset-begin',{name:file.name,size:file.size});let offset=0;
+  while(offset<file.size){
+   if(datasetUploadCancelled)throw Error('Upload cancelled.');
+   const end=Math.min(offset+upload.chunk_size,file.size);let result;
+   for(let attempt=0;attempt<3;attempt++){
+    try{const response=await fetch('/api/dataset-chunk/'+upload.id,{method:'POST',headers:{'X-Studio-Token':state.token,'X-Upload-Offset':String(offset),'Content-Type':'application/octet-stream'},body:file.slice(offset,end)});result=await response.json();if(!response.ok)throw Error(result.error||'Chunk upload failed');break;}
+    catch(error){if(attempt===2)throw error;await new Promise(resolve=>setTimeout(resolve,1000));}
+   }
+   offset=result.offset;progress.value=offset/file.size*100;status.textContent=(offset/1024**3).toFixed(2)+' / '+(file.size/1024**3).toFixed(2)+' GB · '+Math.round(progress.value)+'%';
+  }
+  if(datasetUploadCancelled)throw Error('Upload cancelled.');
+  status.textContent='Upload complete. Checking dataset…';await api('dataset-finish',{id:upload.id});finished=true;status.textContent='Import started. Follow progress in Activity.';form.reset();await refresh();tab('jobs');
+ }catch(error){status.textContent=error.message;if(upload&&!finished)try{await api('dataset-cancel',{id:upload.id});}catch{}throw error;}
+ finally{button.disabled=false;cancel.hidden=true;}
+});};

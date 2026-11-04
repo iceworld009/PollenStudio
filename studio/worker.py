@@ -15,6 +15,8 @@ def run(config):
     if kind == 'import':
         from studio.tfrecords import import_archive
         print('Imported', import_archive(config['archive']), 'original images', flush=True)
+        if config.get('uploaded_dataset'):
+            archive=Path(config['archive']);archive.unlink(missing_ok=True);archive.with_suffix('.json').unlink(missing_ok=True)
         return
     if kind in ('predict', 'evaluate'):
         from studio.inference import Detector

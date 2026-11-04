@@ -63,7 +63,7 @@ def import_archive(path):
         for name in archive.namelist():
             if not name.endswith('.tfrecord'):
                 continue
-            split = 'val' if Path(name).parts[0] in ('valid', 'val', 'validation') else 'train'
+            split = 'val' if any(part.lower() in ('valid', 'val', 'validation') for part in Path(name).parts[:-1]) else 'train'
             with archive.open(name) as stream:
                 while header := stream.read(12):
                     if len(header) != 12:

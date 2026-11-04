@@ -1,3 +1,5 @@
+Dataset upload: import TensorFlow TFRecord ZIPs up to 10 GB directly from Windows or another browser. Includes chunked transfer, progress, cancellation, retry handling, disk-space checks, and preserved train/validation splits. Removes remaining PLN_600 wording from the interface.
+
 Setup reliability fix: resolve requirements.txt relative to the installer, validate the complete source folder before copying to WSL, and report missing files explicitly.
 
 Windows setup fix: preserve Windows path separators, spaces, and shell quoting when passing commands to WSL. Normalize script line endings before running in Linux.

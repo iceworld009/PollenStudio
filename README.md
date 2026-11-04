@@ -59,6 +59,12 @@ Only included photos enter training. Pending, excluded, and trashed photos do no
 
 Keep separate recording sessions for training and validation. Reserve a fresh recording for final testing rather than choosing a model using the same footage repeatedly.
 
+## Upload an existing dataset
+
+In **Dataset → Original training data**, choose a TensorFlow TFRecord ZIP from your device and click **Upload dataset**. Archives up to **10 GB** are transferred in 8 MB chunks directly into server storage. The browser shows progress and can cancel an upload. Keep the page open until upload finishes; import then runs as an Activity job.
+
+Training and validation folders and the three supported class IDs are preserved, including archives with an enclosing directory. This uploader accepts TFRecord ZIPs, not COCO JSON, VOC XML, or YOLO labels. Convert those formats before uploading. Maximum extracted size is 40 GB, with 100,000 archive entries. Leave enough free space for the ZIP and imported photos. Successful imports remove the uploaded ZIP; failed imports retain it in `studio_data/dataset-uploads/` for diagnosis.
+
 ## Models and labels
 
 Studio accepts SSD TFLite models with `TFLite_Detection_PostProcess` outputs. Raw YOLO output layouts and Coral-compiled models cannot run in the Studio CPU preview.

@@ -20,7 +20,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 from studio.core import ROOT, DATA, DEFAULT_MODEL, connect, images, import_folder, snapshot, validate_boxes, trash_image, trash_images, archive_images, archive_all_included, save_review
 from studio.models import available_models, resolve_model, store_upload, MAX_MODEL_BYTES
-from studio import training, training_runtime, photo_audit
+from studio import training, training_runtime, photo_audit, dataset_upload
 
 TOKEN = secrets.token_urlsafe(32)
 PROCESSES = {}
@@ -245,6 +245,13 @@ class Handler(BaseHTTPRequestHandler):
         try:
             path = urlsplit(self.path).path
             size = int(self.headers.get('Content-Length', '0'))
+            if path.startswith('/api/dataset-chunk/'):
+                if size < 1 or size > dataset_upload.CHUNK_BYTES:
+                    self.close_connection=True
+                    raise ValueError('Chunk exceeds 8 MB')
+                ident=path.rsplit('/',1)[1]
+                offset=int(self.headers.get('X-Upload-Offset','-1'))
+                return self.send(dataset_upload.append(ident,offset,self.rfile,size))
             if size < 0 or size > (512*1024*1024+131072 if path == '/api/upload-photos' else MAX_MODEL_BYTES+131072 if path == '/api/upload-model' else 2_000_000):
                 self.close_connection = True
                 raise ValueError('Request too large')
@@ -279,6 +286,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send({'ok':True})
             if path == '/api/import':
                 return self.send({'count':import_folder(body['folder'], body['split'])})
+            if path == '/api/dataset-begin':
+                return self.send(dataset_upload.begin(body.get('name'),body.get('size')))
+            if path == '/api/dataset-cancel':
+                dataset_upload.cancel(body['id']);return self.send({'ok':True})
+            if path == '/api/dataset-finish':
+                archive=dataset_upload.complete(body['id'])
+                return self.send(launch({'kind':'import','archive':str(archive),'uploaded_dataset':True}))
             if path == '/api/import-original':
                 archive = Path(body['archive']).expanduser().resolve()
                 if not archive.is_file():
