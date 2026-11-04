@@ -6,8 +6,17 @@ import shutil
 import sys
 
 
-def configure(config):
+def tensorflow_runtime():
     import tensorflow as tf
+    # tf-slim still calls aliases removed from TensorFlow's internal module.
+    from tensorflow.python.ops import control_flow_ops
+    if not hasattr(control_flow_ops,'case'):control_flow_ops.case=tf.case
+    if not hasattr(control_flow_ops,'cond'):control_flow_ops.cond=tf.cond
+    return tf
+
+
+def configure(config):
+    tf = tensorflow_runtime()
     from google.protobuf import text_format
     from object_detection.protos import pipeline_pb2, train_pb2
     from studio.training_runtime import PRETRAINED
@@ -70,11 +79,14 @@ def configure(config):
 
 
 def train(config):
-    import tensorflow as tf
+    tf = tensorflow_runtime()
     from absl import logging
     from object_detection import model_lib_v2
     logging.set_verbosity(logging.INFO)
     tf.get_logger().setLevel('INFO')
+    if config['device']=='gpu' and not tf.config.list_physical_devices('GPU') and config.get('requested_device')=='auto':
+        print('GPU no longer available; Automatic mode is using CPU.',flush=True)
+        config['device']='cpu'
     if config['device'] == 'gpu' and not tf.config.list_physical_devices('GPU'):
         raise ValueError('TensorFlow cannot see a CUDA GPU. Choose CPU or install the compatible CUDA libraries in the training environment.')
     for gpu in tf.config.list_physical_devices('GPU'):
@@ -107,7 +119,7 @@ def train(config):
 
 
 def export(config):
-    import tensorflow as tf
+    tf = tensorflow_runtime()
     from google.protobuf import text_format
     from object_detection.protos import pipeline_pb2
     from object_detection import export_tflite_graph_lib_tf2
@@ -119,7 +131,7 @@ def export(config):
 
 
 def quantize(config):
-    import tensorflow as tf
+    tf = tensorflow_runtime()
     import numpy as np
     from PIL import Image, ImageOps
     output = Path(config['output'])
@@ -132,6 +144,10 @@ def quantize(config):
             with Image.open(path) as image:
                 rgb = ImageOps.exif_transpose(image).convert('RGB').resize((size,size),Image.Resampling.BILINEAR)
                 data = np.asarray(rgb,dtype=np.float32)/127.5-1.0
+                # Keep input quantization compatible with the full camera range,
+                # even when the calibration photos contain only dark pixels.
+                data[0,0,:] = -1.0
+                data[0,1,:] = 1.0
             yield [data[None]]
     converter.representative_dataset = representative
     converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
@@ -145,7 +161,7 @@ def quantize(config):
 
 
 def validation_loss(config):
-    import tensorflow as tf
+    tf = tensorflow_runtime()
     from google.protobuf import text_format
     from object_detection.protos import pipeline_pb2
     from object_detection.builders import model_builder
@@ -185,7 +201,7 @@ def plot(config):
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
-    import tensorflow as tf
+    tf = tensorflow_runtime()
     output = Path(config['output'])
     accumulator = EventAccumulator(str(output/'checkpoint/train'),size_guidance={'tensors':0,'scalars':0})
     accumulator.Reload()
@@ -213,7 +229,7 @@ def plot(config):
 
 
 if __name__ == '__main__':
-    import tensorflow as tf
+    tf = tensorflow_runtime()
     # TF-Slim 1.1 uses names moved out of this internal module in TF 2.15.
     from tensorflow.python.ops import control_flow_ops
     if not hasattr(control_flow_ops,'case'): control_flow_ops.case = tf.case
