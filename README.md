@@ -83,6 +83,8 @@ For a three-class model, upload a labels file containing those three names, one 
 
 Select the input normalization used by your model exporter. Models trained in Studio use **−1 to 1**. Renaming a model does not change its position in the date-ordered model list.
 
+Select a saved model in **Review** and click **Download model ZIP** to export its CPU TFLite file, matching labels, and inference metadata. The download excludes photos, checkpoints, and local filesystem paths. Full training bundles remain available in Activity.
+
 ## Training and Limelight export
 
 Use **Prepare local trainer** in the Training tab to install the separate TensorFlow environment, pretrained SSD MobileNet V2 weights, and compiler. Setup downloads third-party software and requires internet access and disk space. NVIDIA GPU training also requires a compatible driver and access to its device files; CPU training is supported.

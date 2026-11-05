@@ -20,7 +20,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 from studio.core import ROOT, DATA, DEFAULT_MODEL, connect, images, import_folder, snapshot, validate_boxes, trash_image, trash_images, archive_images, archive_all_included, save_review
-from studio.models import available_models, resolve_model, store_upload, MAX_MODEL_BYTES
+from studio.models import available_models, resolve_model, store_upload, MAX_MODEL_BYTES, export_model
 from studio import training, training_runtime, photo_audit, dataset_upload
 
 TOKEN = secrets.token_urlsafe(32)
@@ -112,11 +112,13 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
-    def send(self, value, status=200, content_type='application/json'):
+    def send(self, value, status=200, content_type='application/json', download=None):
         body = json.dumps(value).encode() if content_type == 'application/json' else value
         self.send_response(status)
         self.send_header('Content-Type', content_type)
         self.send_header('Content-Length', str(len(body)))
+        if download:
+            self.send_header('Content-Disposition', 'attachment; filename="'+download+'"')
         self.send_header('Cache-Control', 'no-store')
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Content-Security-Policy', "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob:; frame-ancestors 'none'")
@@ -219,6 +221,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if path == '/api/state':
                 return self.send({'token': TOKEN, 'images': images(), 'trash': images(trashed=True), 'jobs': jobs(), 'model': str(DEFAULT_MODEL), 'models':available_models(), 'training':training_runtime.status(), 'training_runs':training.available_runs(), 'photo_audit':photo_audit.report_for_state(), 'dependencies': {k: importlib.util.find_spec(k) is not None for k in ('numpy','PIL','ai_edge_litert')}})
+            if path.startswith('/api/model-export/'):
+                filename,content=export_model(path.rsplit('/',1)[1])
+                return self.send(content,content_type='application/zip',download=filename)
             if path.startswith('/api/training/'):
                 parts = path.split('/')
                 if len(parts) != 5 or len(parts[3]) != 32 or any(c not in '0123456789abcdef' for c in parts[3]) or parts[4] not in training.ARTIFACT_NAMES | TEST_PREVIEW_ARTIFACTS:

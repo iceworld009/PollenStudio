@@ -1,5 +1,8 @@
 """Persist uploaded model versions after isolated CPU compatibility checks."""
 import hashlib
+import io
+import re
+import zipfile
 import json
 from pathlib import Path
 import shutil
@@ -81,3 +84,18 @@ def store_upload(filename, content, normalization='zero_one', labels=b''):
     except Exception:
         shutil.rmtree(directory, ignore_errors=True)
         raise
+
+
+def export_model(ident):
+    """Package inference files without local paths, datasets or checkpoints."""
+    model=resolve_model(ident)
+    content=Path(model['path']).read_bytes()
+    stem=re.sub(r'[^A-Za-z0-9_.-]+','_',model['name']).removesuffix('.tflite').strip('._')[:100] or 'model'
+    info={key:model[key] for key in ('name','labels','normalization','inspection','recommended_confidence') if key in model}
+    info['sha256']=hashlib.sha256(content).hexdigest()
+    buffer=io.BytesIO()
+    with zipfile.ZipFile(buffer,'w',zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(stem+'.tflite',content)
+        archive.writestr(stem+'_labels.txt','\n'.join(model['labels'])+'\n')
+        archive.writestr('model-info.json',json.dumps(info,indent=2))
+    return stem+'.zip',buffer.getvalue()
