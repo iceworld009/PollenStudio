@@ -29,11 +29,6 @@ JOB_LOCK = threading.RLock()
 TEST_PREVIEW_ARTIFACTS = {'test_gallery.html', 'test_preview.jpg', 'test_examples.json'} | {f'test_example_{n}.jpg' for n in range(1, 7)}
 
 
-def live_experiment():
-    # Reserved for future managed training searches; ordinary jobs use jobs().
-    return None
-
-
 def jobs():
     with JOB_LOCK:
         return _jobs()
@@ -354,9 +349,6 @@ class Handler(BaseHTTPRequestHandler):
                 ident = uuid.uuid4().hex
                 return self.send(launch({'kind':'export', 'format':export_format, 'id':ident}, DATA / 'jobs' / ident))
             if path == '/api/train':
-                experiment = live_experiment()
-                if experiment and experiment['active']:
-                    raise ValueError('The GPU search is running. Let it finish before starting another training job.')
                 if not training_runtime.status()['ready']:
                     raise ValueError('Prepare the local TensorFlow trainer before training.')
                 options = training.parameters(body)

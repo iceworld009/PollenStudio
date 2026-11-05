@@ -1,3 +1,5 @@
+Photo library cleanup: remove obsolete AI/manual review warnings, local contact-sheet notes, capture-specific metadata and hidden auto-trash policy. Filter legacy cached reports so stale review flags do not reappear. Quality scans only report reproducible quality, duplicate and split-overlap warnings; they do not change photos or annotations.
+
 Model download: select any saved model in Review and click Download model ZIP. Includes the CPU TFLite file, matching labels and inference metadata, without photos, checkpoints or local filesystem paths. Verified by isolated tests and a browser download check.
 
 Validation: 50 automated tests in a temporary Bubblewrap container (one optional private-model test skipped); isolated HTTP upload/import/annotation checks; desktop/mobile browser checks; and a two-step synthetic three-class GPU train/export/quantize/inference/Coral compile test on GTX 1650. Fixed TensorFlow decoder aliases and narrow-range calibration compatibility discovered by that smoke test. No benchmark-quality model was produced or distributed.

@@ -9,6 +9,7 @@ import time
 from studio.core import DATA, images, validate_boxes
 
 REPORT = DATA/'photo-audit.json'
+AUTOMATIC_CODES = {'low_resolution','low_information','soft_image','very_dark','very_bright','tiny_target','unreadable','split_overlap','duplicate','label_conflict','near_duplicate'}
 
 
 def feature(row):
@@ -39,7 +40,8 @@ def box_similarity(first,second):
     if len(first)!=len(second):return False
     unmatched=set(range(len(second)))
     for box in first:
-        best=max(unmatched,key=lambda i:iou(box,second[i]),default=None)
+        candidates=[i for i in unmatched if box.get('class_id',0)==second[i].get('class_id',0)]
+        best=max(candidates,key=lambda i:iou(box,second[i]),default=None)
         if best is None or iou(box,second[best])<.85:return False
         unmatched.remove(best)
     return True
@@ -54,7 +56,7 @@ def analyze(rows):
         if not any(w['code']==code and w.get('related_id')==related for w in result[ident]['warnings']):
             result[ident]['warnings'].append(entry)
     for index,row in enumerate(rows):
-        ident=row['id'];result[ident]={'warnings':[],'metrics':{},'visual_reviewed':False}
+        ident=row['id'];result[ident]={'warnings':[],'metrics':{}}
         try:
             metrics,small,pixels,phash=feature(row)
             result[ident]['metrics']=metrics
@@ -104,47 +106,15 @@ def analyze(rows):
             break
         else:
             representatives.append(row)
-    notes_file=DATA/'photo-audit-review.json'
-    notes=json.loads(notes_file.read_text()) if notes_file.is_file() else {}
-    for ident,note in notes.items():
-        if ident in result:
-            result[ident]['visual_reviewed']=True
-            for warning in note.get('warnings',[]):result[ident]['warnings'].append(warning)
-            if note.get('note'):result[ident]['visual_note']=note['note']
-    provenance_file=DATA/'photo-provenance.json'
-    provenance=json.loads(provenance_file.read_text()) if provenance_file.is_file() else {}
-    for ident,entry in result.items():
-        if ident in provenance:entry['provenance']=provenance[ident]
     summary=Counter(w['code'] for entry in result.values() for w in entry['warnings'])
     return {'generated':time.time(),'scanned':len(rows),'items':result,'counts':dict(summary),
             'flagged':sum(bool(entry['warnings']) for entry in result.values()),
-            'visually_reviewed':sum(entry['visual_reviewed'] for entry in result.values()),
-            'dataset_notes':['Some camera frames contain baked-in FPS/crosshair overlays. Prefer clean camera captures for future data.', 'Empty scenes, distractor balls, shadows, and occlusions can be useful negatives and hard examples; do not remove them solely because they are difficult.'],
             'note':'Suggestions for review only. Difficult scenes and empty negative images can be valuable. No images were excluded automatically.'}
-
-
-def apply_review_policy(report):
-    """Apply explicitly configured curation; similarity alone never removes a photo."""
-    policy_file=DATA/'photo-review-policy.json'
-    if not policy_file.is_file():return []
-    policy=json.loads(policy_file.read_text())
-    if policy.get('soft_images')!='trash':return []
-    from studio.core import trash_images
-    active={row['id'] for row in images()}
-    selected=[ident for ident,entry in report.get('items',{}).items()
-              if ident in active and any(w['code']=='soft_image' for w in entry['warnings'])]
-    for start in range(0,len(selected),1000):trash_images(selected[start:start+1000])
-    report['automatically_trashed_soft_images']=selected
-    return selected
 
 
 def run():
     rows=images()
     report=analyze(rows)
-    removed=apply_review_policy(report)
-    if removed:
-        print(f'Moved {len(removed)} soft photos to recoverable Trash.',flush=True)
-        report['note']='Soft photos moved to recoverable Trash under your saved preference. Similarity warnings never remove photos; retain model-failure examples after correcting their labels.'
     temporary=REPORT.with_suffix('.tmp');temporary.write_text(json.dumps(report));temporary.replace(REPORT)
     print('Photo audit complete:',json.dumps({k:v for k,v in report.items() if k!='items'}),flush=True)
     return report
@@ -156,20 +126,16 @@ def report_for_state(rows=None):
     active=rows if rows is not None else images()
     ids={r['id'] for r in active+images(True)}
     report['items']={ident:entry for ident,entry in report['items'].items() if ident in ids}
-    # Once the comparison photo is removed, its duplicate warning is no longer actionable.
-    repeated_count=sum(entry.get('provenance',{}).get('source')=='capture20261023' for entry in report['items'].values())
-    for entry in report['items'].values():
-        warnings=[]
-        for warning in entry['warnings']:
-            if warning['code']=='repetitive_capture':
-                if repeated_count<=12:continue
-                if warning.get('related_id') not in ids:warning.pop('related_id',None)
-            elif warning.get('related_id') and warning['related_id'] not in ids:
-                continue
-            warnings.append(warning)
-        entry['warnings']=warnings
+    # Old local sidecars and manual reviews are not part of a reproducible scan.
+    report['items']={ident:{'metrics':entry.get('metrics',{}),
+        'warnings':[warning for warning in entry.get('warnings',[])
+                    if warning.get('code') in AUTOMATIC_CODES
+                    and (not warning.get('related_id') or warning['related_id'] in ids)]}
+        for ident,entry in report['items'].items()}
+    for key in ('visually_reviewed','dataset_notes','automatically_trashed_soft_images'):
+        report.pop(key,None)
+    report['note']='Automatic quality and duplicate checks only. Review warnings before excluding photos.'
     report['scanned']=len(report['items'])
-    report['visually_reviewed']=sum(entry.get('visual_reviewed',False) for entry in report['items'].values())
     report['flagged']=sum(bool(entry['warnings']) for entry in report['items'].values())
     report['pending']=len(ids-set(report['items']))
     report['counts']=dict(Counter(w['code'] for entry in report['items'].values() for w in entry['warnings']))

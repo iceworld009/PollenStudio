@@ -46,17 +46,12 @@ class StudioTests(unittest.TestCase):
         handler.do_POST()
         return result[0]
 
-    def test_soft_photo_policy_preserves_near_duplicates_and_restore(self):
-        self.add('blur','include');self.add('similar','include');self.add('both','pending')
-        report={'items':{'blur':{'warnings':[{'code':'soft_image'}]},
-                         'similar':{'warnings':[{'code':'near_duplicate'}]},
-                         'both':{'warnings':[{'code':'soft_image'},{'code':'near_duplicate'}]}}}
-        self.assertEqual(photo_audit.apply_review_policy(report),[])
+    def test_quality_scan_does_not_apply_old_trash_policy(self):
+        self.add('blur','include');self.add('similar','include');self.add('pending')
+        report={'items':{'blur':{'warnings':[{'code':'soft_image'}]}}}
         (self.data/'photo-review-policy.json').write_text(json.dumps({'soft_images':'trash'}))
-        self.assertEqual(set(photo_audit.apply_review_policy(report)),{'blur','both'})
-        self.assertEqual([r['id'] for r in core.images()],['similar'])
-        self.assertEqual(photo_audit.apply_review_policy(report),[])
-        core.trash_image('blur',restore=True)
+        with patch.object(photo_audit,'analyze',return_value=report):photo_audit.run()
+        self.assertEqual({r['id'] for r in core.images()},{'blur','similar','pending'})
         self.assertEqual(next(r for r in core.images() if r['id']=='blur')['status'],'include')
 
     def test_box_validation(self):
@@ -84,11 +79,6 @@ class StudioTests(unittest.TestCase):
         self.assertEqual(tfrecords.import_archive(archive),1)
         self.assertEqual([b['class_id'] for b in core.images()[0]['boxes']],[0,1,2])
 
-    def test_active_gpu_search_prevents_a_second_training_job(self):
-        with patch.object(server, 'live_experiment', return_value={'active': True}):
-            status, result = self.request('/api/train', {'device': 'gpu'})
-        self.assertEqual(status, 400)
-        self.assertIn('GPU search is running', result['error'])
 
     def test_ai_review_requires_approval_and_preserves_old_labels(self):
         self.add('proposal','pending');self.add('original','include',session='Original dataset / train')
