@@ -21,6 +21,6 @@ Open http://localhost:8765 after starting the server. Internet access is require
 
 Both packages contain the same application source plus platform launchers. No models or datasets are included. Supports pollen, blue Nectar, and red Nectar, with photo uploads of up to 1,000 files / 512 MB.
 
-Linux application tests and fresh-workspace checks were performed by the maintainers. A real Windows/RTX 3050 installation has not yet been tested. GPU training and Coral compilation remain dependent on external runtime downloads and compatible hardware.
+Linux application tests and fresh-workspace checks were performed by the maintainers. Windows/WSL2 hardware validation is still in progress. GPU training and Coral compilation remain dependent on external runtime downloads and compatible hardware.
 
 MIT licensed. Retain the Harambe Cartel (Team 20912) copyright and license notice when redistributing.

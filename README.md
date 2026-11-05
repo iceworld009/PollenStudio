@@ -29,7 +29,7 @@ Install an up-to-date NVIDIA Windows driver before GPU training. The application
 
 Compute defaults to **Automatic**: Studio checks the current driver and runs a small TensorFlow GPU operation. A usable GPU is selected automatically; otherwise training uses CPU and explains when detected hardware is unavailable to TensorFlow. You can explicitly select CPU or GPU. Device checks refresh periodically and Automatic mode checks again when a training job starts.
 
-An RTX 3050 is an intended training target, but training batch size depends on available VRAM. The Windows package uses the same Linux TensorFlow trainer through WSL2, rather than native Windows CUDA. A real Windows/RTX 3050 installation has not yet been validated by the maintainers.
+NVIDIA GPU training requires a compatible driver; choose a batch size that fits the GPU’s available VRAM. The Windows package uses the same Linux TensorFlow trainer through WSL2, rather than native Windows CUDA. Windows/WSL2 hardware validation is still in progress.
 
 ### Development setup
 
