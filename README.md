@@ -4,6 +4,35 @@ A local web app for building object detection datasets and training TFLite model
 
 Pollen Studio supports three game elements: pollen, blue Nectar, and red Nectar. Upload camera photos, draw or correct boxes, review model predictions, and train from the images you have approved.
 
+**[Download the latest release](https://github.com/iceworld009/PollenStudio/releases/latest)** · [Install and start](#install-and-start) · [Dataset workflow](#dataset-workflow) · [Harambe Cartel](https://www.harambe.ro/)
+
+## A look inside Pollen Studio
+
+Upload photos → review and label objects → train and export a Limelight detector.
+
+### Dataset workspace
+
+Add camera photos, keep training and validation sessions separate, import an existing TFRecord dataset, and export reviewed examples.
+
+[![Pollen Studio Dataset tab showing photo uploads, TFRecord import, and reviewed dataset export](docs/screenshots/dataset.jpg)](docs/screenshots/dataset.jpg)
+
+<table>
+  <tr>
+    <th>Review &amp; annotations</th>
+    <th>Training &amp; export</th>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/screenshots/review.jpg"><img src="docs/screenshots/review.jpg" alt="Review workspace with model selection, annotation tools, element classes, and review controls" width="100%"></a></td>
+    <td width="50%"><a href="docs/screenshots/training.jpg"><img src="docs/screenshots/training.jpg" alt="Training tab with model settings, compute selection, and the TFLite and Coral export workflow" width="100%"></a></td>
+  </tr>
+  <tr>
+    <td>Draw and correct bounding boxes for pollen and blue/red Nectar, then approve photos for training.</td>
+    <td>Choose a starting model, training steps, batch size, learning rate, and compute device.</td>
+  </tr>
+</table>
+
+*Click a screenshot to view it at full size. Screenshots show a fresh workspace before importing photos or preparing the local trainer; no private dataset or model is included.*
+
 ## Install and start
 
 Download the Linux or Windows source package from Releases and extract it into a permanent folder. Setup downloads Python 3.10 and the application dependencies; internet access is required. No private model or dataset is bundled.
