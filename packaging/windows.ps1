@@ -1,7 +1,7 @@
 param([switch]$Setup)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$distro = 'Ubuntu-22.04'
+$distro = 'Ubuntu'
 function Run-WSL([string[]]$Arguments) {
     & wsl.exe @Arguments
     if ($LASTEXITCODE -ne 0) { throw "WSL command failed (exit $LASTEXITCODE)." }
